@@ -1,0 +1,96 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+backend/.env
+frontend/.env
+
+# Build outputs
+build/
+dist/
+*/build/
+*/dist/
+frontend/build/
+backend/dist/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+
+# Uploads and user-generated content
+# Ignore all files in uploads directories but keep the directory structure
+uploads/*
+*/uploads/*
+backend/uploads/*
+
+# Keep .gitkeep files to track empty directories
+!uploads/.gitkeep
+!*/uploads/.gitkeep
+!backend/uploads/.gitkeep
+
+# Testing
+coverage/
+*.coverage
+.nyc_output
+.jest/
+
+# Misc
+.cache/
+.temp/
+.tmp/
+*.pid
+*.seed
+*.pid.lock
+
+# Package manager
+.pnpm-store/
+.yarn/
+.npm/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# dotenv environment variable files
+.env.backup
