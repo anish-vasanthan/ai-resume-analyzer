@@ -10,7 +10,7 @@ const { generateInterviewQuestions } = require('../utils/groqService');
 router.post('/start', protect, [
   body('role').trim().notEmpty().withMessage('Role is required')
     .isLength({ min: 2, max: 100 }).withMessage('Role must be between 2 and 100 characters'),
-  body('resumeId').optional().isInt().withMessage('Resume ID must be a valid integer')
+  body('resumeId').optional().isUUID().withMessage('Resume ID must be a valid UUID')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -92,7 +92,7 @@ router.post('/start', protect, [
 
 // @route   POST /api/mock-interview/:id/answer
 router.post('/:id/answer', protect, [
-  param('id').isInt().withMessage('Invalid mock interview ID'),
+  param('id').isUUID().withMessage('Invalid mock interview ID'),
   body('questionIndex').isInt({ min: 0 }).withMessage('Question index must be a non-negative integer'),
   body('answer').trim().notEmpty().withMessage('Answer is required')
     .isLength({ max: 1000 }).withMessage('Answer must not exceed 1000 characters')
@@ -156,7 +156,7 @@ router.post('/:id/answer', protect, [
 
 // @route   POST /api/mock-interview/:id/complete
 router.post('/:id/complete', protect, [
-  param('id').isInt().withMessage('Invalid mock interview ID')
+  param('id').isUUID().withMessage('Invalid mock interview ID')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -213,7 +213,7 @@ router.get('/', protect, async (req, res) => {
 
 // @route   GET /api/mock-interview/:id
 router.get('/:id', protect, [
-  param('id').isInt().withMessage('Invalid mock interview ID')
+  param('id').isUUID().withMessage('Invalid mock interview ID')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);

@@ -7,7 +7,7 @@ const { generateInterviewQuestions } = require('../utils/groqService');
 
 // @route   GET /api/interview/questions/:resumeId
 router.get('/questions/:resumeId', protect, [
-  param('resumeId').isInt().withMessage('Invalid resume ID')
+  param('resumeId').isUUID().withMessage('Invalid resume ID')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);

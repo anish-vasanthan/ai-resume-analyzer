@@ -36,7 +36,7 @@ async function extractJDText(filePath, originalName) {
 router.post('/:id',
   protect,
   jdUpload.single('jdFile'),
-  [param('id').isInt().withMessage('Invalid resume ID')],
+  [param('id').isUUID().withMessage('Invalid resume ID')],
   async (req, res) => {
     let tempFilePath = null;
     try {
@@ -117,7 +117,7 @@ router.post('/:id',
 // @route   GET /api/enhance/:id
 // @desc    Return previously saved enhancement (no AI call)
 router.get('/:id', protect, [
-  param('id').isInt().withMessage('Invalid resume ID')
+  param('id').isUUID().withMessage('Invalid resume ID')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);

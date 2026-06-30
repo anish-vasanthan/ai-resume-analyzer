@@ -164,7 +164,7 @@ async function performStartupChecks() {
 // Start server with startup checks
 performStartupChecks()
   .then(() => {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log('\n' + '='.repeat(50));
       console.log(`✅ Server running on port ${PORT}`);
       console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -184,6 +184,24 @@ performStartupChecks()
       console.log(`\n🌐 Server ready at http://localhost:${PORT}`);
       console.log(`🏥 Health check: http://localhost:${PORT}/health\n`);
     });
+
+    // Graceful shutdown — close DB connections cleanly on process termination
+    const shutdown = async (signal) => {
+      console.log(`\n${signal} received. Shutting down gracefully...`);
+      server.close(async () => {
+        try {
+          const { sequelize } = require('./config/database');
+          await sequelize.close();
+          console.log('✅ Database connections closed.');
+        } catch (err) {
+          console.error('Error closing database connections:', err.message);
+        }
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT',  () => shutdown('SIGINT'));
   })
   .catch((error) => {
     console.error('❌ Failed to start server:', error.message);

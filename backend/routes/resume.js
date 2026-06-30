@@ -93,7 +93,7 @@ router.get('/', protect, async (req, res) => {
 
 // @route   GET /api/resume/:id
 router.get('/:id', protect, [
-  param('id').isInt().withMessage('Invalid resume ID')
+  param('id').isUUID().withMessage('Invalid resume ID')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -118,7 +118,7 @@ router.get('/:id', protect, [
 
 // @route   DELETE /api/resume/:id
 router.delete('/:id', protect, [
-  param('id').isInt().withMessage('Invalid resume ID')
+  param('id').isUUID().withMessage('Invalid resume ID')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -147,7 +147,6 @@ router.delete('/:id', protect, [
 // Helper: shape resume data for frontend
 function formatResume(r) {
   return {
-    _id: r.id,
     id: r.id,
     fileName: r.fileName,
     fileType: r.fileType,

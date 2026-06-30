@@ -4,9 +4,9 @@ const { sequelize } = require('../config/database');
 
 const User = sequelize.define('User', {
   id: {
-    type:          DataTypes.INTEGER,
-    primaryKey:    true,
-    autoIncrement: true
+    type:         DataTypes.UUID,
+    primaryKey:   true,
+    defaultValue: DataTypes.UUIDV4
   },
   name: {
     type:      DataTypes.STRING(100),
@@ -57,6 +57,12 @@ const User = sequelize.define('User', {
 User.prototype.comparePassword = async function (candidatePassword) {
   if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password);
+};
+
+// Associations
+User.associate = (models) => {
+  User.hasMany(models.Resume,        { foreignKey: 'userId', onDelete: 'CASCADE' });
+  User.hasMany(models.MockInterview, { foreignKey: 'userId', onDelete: 'CASCADE' });
 };
 
 module.exports = User;

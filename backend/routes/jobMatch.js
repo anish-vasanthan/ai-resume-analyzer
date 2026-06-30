@@ -38,7 +38,7 @@ async function extractJDText(filePath, originalName) {
 router.post('/:resumeId',
   protect,
   jdUpload.single('jdFile'),
-  [param('resumeId').isInt().withMessage('Invalid resume ID')],
+  [param('resumeId').isUUID().withMessage('Invalid resume ID')],
   async (req, res) => {
     let tempFilePath = null;
     try {
