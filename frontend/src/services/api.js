@@ -33,21 +33,15 @@ api.interceptors.response.use(
       // Server responded with error status
       const message = error.response.data?.message || 'An error occurred';
       
-      // Handle 401 errors — only redirect if the token itself is rejected
-      // (not for other request failures on authenticated routes)
+      // Handle 401 errors — token is expired or invalid
       if (error.response.status === 401) {
-        // Only redirect if the 401 came from an auth/profile endpoint,
-        // meaning the token is genuinely expired/invalid
-        const url = error.config?.url || '';
-        const isAuthCheck = url.includes('/user/profile') || url.includes('/auth/');
-        if (isAuthCheck) {
-          localStorage.removeItem('token');
-          console.error('Session expired. Redirecting to login...');
-          window.location.href = '/login';
-          return Promise.reject(new Error('Session expired. Please login again.'));
-        }
-        // For other 401s (e.g. avatar upload), just return the error message
-        return Promise.reject(new Error(message || 'Authentication required.'));
+        // Any 401 with this exact message means jwt.verify() failed on the backend —
+        // the token is expired or was signed with a different secret.
+        // Clear localStorage and redirect to login so the user gets a fresh token.
+        localStorage.removeItem('token');
+        console.error('Session expired. Redirecting to login...');
+        window.location.href = '/login';
+        return Promise.reject(new Error('Session expired. Please log in again.'));
       }
       
       // Handle server errors with descriptive messages
@@ -77,10 +71,11 @@ export const uploadResume = async (file) => {
   const formData = new FormData();
   formData.append('resume', file);
   
+  // Do NOT set Content-Type manually — axios auto-sets multipart/form-data
+  // with the correct boundary when given a FormData object.
+  // Manually setting it here can strip the Authorization header in some axios versions.
   const response = await api.post('/resume/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    timeout: 60000  // 60s — AI analysis can be slow
   });
   
   return response.data;
@@ -126,8 +121,8 @@ export const updateProfile = async (data) => {
 export const uploadAvatar = async (file) => {
   const formData = new FormData();
   formData.append('avatar', file);
+  // Do NOT set Content-Type manually — axios sets it with the correct boundary
   const response = await api.post('/user/avatar', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 60000  // 60s — base64 image write to Supabase can be slow
   });
   return response.data;
@@ -189,12 +184,8 @@ export const enhanceResume = async (id, jobDescription) => {
   if (jobDescription instanceof File) {
     const formData = new FormData();
     formData.append('jdFile', jobDescription);
-    // IMPORTANT: Do NOT set Content-Type manually.
-    // Setting 'multipart/form-data' without the boundary breaks multer on the server.
-    // Setting it to undefined removes the axios-default 'application/json' so the
-    // browser's XHR/Fetch can auto-inject 'multipart/form-data; boundary=...' correctly.
+    // Do NOT set Content-Type manually — axios sets multipart/form-data with boundary automatically
     const response = await api.post(`/enhance/${id}`, formData, {
-      headers: { 'Content-Type': undefined },
       timeout: 90000
     });
     return response.data;
@@ -220,9 +211,8 @@ export const analyzeJobMatch = async (resumeId, jobDescription) => {
 export const analyzeJobMatchFile = async (resumeId, file) => {
   const formData = new FormData();
   formData.append('jdFile', file);
-  const response = await api.post(`/job-match/${resumeId}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  });
+  // Do NOT set Content-Type manually — let axios set it with the correct boundary
+  const response = await api.post(`/job-match/${resumeId}`, formData);
   return response.data;
 };
 
