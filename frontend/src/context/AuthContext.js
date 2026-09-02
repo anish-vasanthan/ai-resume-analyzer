@@ -27,15 +27,30 @@ function saveKnownEmail(email) {
   if (!email) return;
   const list = getKnownEmails();
   if (!list.includes(email)) {
-    list.unshift(email);          // most-recent first
+    list.unshift(email);
     localStorage.setItem(KNOWN_EMAILS_KEY, JSON.stringify(list.slice(0, 10)));
   }
 }
 
+/**
+ * Ping the /health endpoint to wake the Render free-tier server before
+ * making authenticated requests. Render spins down after 15 min of inactivity
+ * and the cold-start takes up to 50s. We fire-and-forget with a long timeout
+ * so the server is warm by the time the real requests go out.
+ */
+async function wakeServer() {
+  try {
+    await axios.get(`${API_URL}/health`, { timeout: 60000 });
+  } catch {
+    // Ignore — even a failed ping attempt gives the server time to wake
+  }
+}
+
 export const AuthProvider = ({ children }) => {
-  const [user,    setUser]    = useState(null);
-  const [token,   setToken]   = useState(localStorage.getItem('token'));
-  const [loading, setLoading] = useState(true);
+  const [user,         setUser]         = useState(null);
+  const [token,        setToken]        = useState(localStorage.getItem('token'));
+  const [loading,      setLoading]      = useState(true);
+  const [serverWaking, setServerWaking] = useState(false);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -43,6 +58,9 @@ export const AuthProvider = ({ children }) => {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         await loadUser();
       } else {
+        // No token — still wake the server in the background so it's ready
+        // when the user logs in.
+        wakeServer();
         setLoading(false);
       }
     };
@@ -53,21 +71,40 @@ export const AuthProvider = ({ children }) => {
   const loadUser = async () => {
     try {
       const response = await axios.get(`${API_BASE}/user/profile`, {
-        timeout: 12000  // 12s — generous but won't hang forever
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 60000  // 60s — Render free tier cold-start can take ~50s
       });
       setUser(response.data.data);
     } catch (err) {
-      // Only logout on 401 (invalid/expired token)
       if (err.response?.status === 401) {
+        // Token is genuinely invalid/expired — log out
         logout();
       } else {
-        // DB timeout, network error, 500 — keep user logged in
-        console.warn('Profile load failed (DB may be slow):', err.message);
-        // Decode basic info from JWT so the UI still works
+        // Timeout or network error — server is waking up but token is fine.
+        // Show a warning in the UI and keep the user logged in using JWT data.
+        console.warn('Profile load failed (server waking up):', err.message);
+        setServerWaking(true);
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
-          setUser(prev => prev || { id: payload.id, name: 'User', email: '' });
+          setUser(prev => prev || {
+            id:    payload.id,
+            name:  payload.name  || 'User',
+            email: payload.email || ''
+          });
         } catch {}
+        // Retry once in the background after 15s — server should be up by then
+        setTimeout(async () => {
+          try {
+            const response = await axios.get(`${API_BASE}/user/profile`, {
+              headers: { Authorization: `Bearer ${token}` },
+              timeout: 30000
+            });
+            setUser(response.data.data);
+            setServerWaking(false);
+          } catch {
+            setServerWaking(false);
+          }
+        }, 15000);
       }
     } finally {
       setLoading(false);
@@ -95,7 +132,6 @@ export const AuthProvider = ({ children }) => {
     return response.data;
   };
 
-  /* Google Sign-In — receives the credential (ID token) from @react-oauth/google */
   const googleLogin = async (credential) => {
     const response = await axios.post(`${API_BASE}/auth/google`, { credential });
     applyAuth(response.data.data);
@@ -106,10 +142,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    setServerWaking(false);
     delete axios.defaults.headers.common['Authorization'];
   };
 
-  /* update user in context after profile edit */
   const updateUser = (updates) => {
     setUser(prev => ({ ...prev, ...updates }));
   };
@@ -118,6 +154,7 @@ export const AuthProvider = ({ children }) => {
     user,
     token,
     loading,
+    serverWaking,
     login,
     register,
     googleLogin,
